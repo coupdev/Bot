@@ -3,55 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crash Game</title>
+    <title>Мини-Игра</title>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; }
-        #game { position: relative; width: 100%; height: 300px; background: #f3f3f3; overflow: hidden; }
-        #car { position: absolute; left: 0; top: 50%; width: 50px; transition: left 0.1s linear; }
-        #multiplier { font-size: 24px; margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 18px; margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .balance {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            font-size: 20px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <h2>Crash Game</h2>
-    <div id="game">
-        <img id="car" src="car.png" alt="Car">
+    <div class="container">
+        <div class="header">Мини-Игра с деньгами</div>
+        <div id="balance" class="balance">Твой баланс: 500$</div>
+        <button id="spend10" class="btn">Потратить 10$</button>
+        <button id="spend50" class="btn">Потратить 50$</button>
+        <button id="spend100" class="btn">Потратить 100$</button>
+        <button id="spend200" class="btn">Потратить 200$</button>
+        <button id="spend500" class="btn">Потратить 500$</button>
+        <div id="gameResult" class="result"></div>
     </div>
-    <p id="multiplier">Множитель: x1.00</p>
-    <button id="stop">🛑 Стоп</button>
-    
+
     <script>
-        let multiplier = 1.0;
-        let running = true;
-        const car = document.getElementById("car");
-        const multiplierText = document.getElementById("multiplier");
-        const stopButton = document.getElementById("stop");
+        let balance = 500; // Начальный баланс
 
-        function startGame() {
-            let interval = setInterval(() => {
-                if (!running) return clearInterval(interval);
-                
-                multiplier += Math.random() * 0.3;
-                multiplierText.innerText = `Множитель: x${multiplier.toFixed(2)}`;
-
-                let carPos = parseInt(car.style.left || 0);
-                car.style.left = `${carPos + 5}px`;
-
-                if (Math.random() < 0.05) {  // 5% шанс краша
-                    running = false;
-                    alert("Ты проиграл! Машина разбилась 🚗💥");
-                }
-            }, 500);
+        // Обновляем баланс на экране
+        function updateBalance() {
+            document.getElementById('balance').innerText = `Твой баланс: ${balance}$`;
         }
 
-        stopButton.onclick = () => {
-            if (running) {
-                running = false;
-                alert(`Ты остановился вовремя! Твой множитель: x${multiplier.toFixed(2)}`);
+        // Обработчик нажатия кнопки "Потратить деньги"
+        function spendMoney(amount) {
+            if (balance < amount) {
+                alert("У тебя недостаточно денег для игры!");
+                return;
             }
-        };
 
-        startGame();
+            balance -= amount;  // Уменьшаем баланс
+            updateBalance();    // Обновляем отображение баланса
+
+            // Случайный результат игры
+            let result = Math.random() > 0.5 ? 'win' : 'lose';
+            let multiplier = (result === 'win') ? (Math.random() * (1000 - 0.1) + 0.1).toFixed(2) : 1;
+            let winnings = amount * multiplier;
+
+            // Выигрыш или проигрыш
+            if (result === 'win') {
+                balance += winnings;
+                document.getElementById('gameResult').innerText = `Поздравляем! Ты выиграл x${multiplier}. Новый баланс: ${balance}$`;
+            } else {
+                document.getElementById('gameResult').innerText = `Ты проиграл. Баланс: ${balance}$`;
+            }
+        }
+
+        // Назначаем обработчики для кнопок
+        document.getElementById('spend10').onclick = () => spendMoney(10);
+        document.getElementById('spend50').onclick = () => spendMoney(50);
+        document.getElementById('spend100').onclick = () => spendMoney(100);
+        document.getElementById('spend200').onclick = () => spendMoney(200);
+        document.getElementById('spend500').onclick = () => spendMoney(500);
+
+        // Инициализация
+        updateBalance();
     </script>
 </body>
 </html>
