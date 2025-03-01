@@ -1,91 +1,74 @@
-import asyncio
-import random
+import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.context import FSMContext
+import random
 
-TOKEN = ""
-bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
+TOKEN = "YOUR_BOT_TOKEN"
+
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-FAKE_PAYMENT_LINK = "t.me/send?start=IVDRMGlTT9No"
+# Стартовые деньги
+start_balance = 500  # 500 виртуальных долларов на старте
 
-# Хранилище состояния игрока
-class GameState(StatesGroup):
-    waiting_for_payment = State()
-    playing = State()
+# Словарь для хранения баланса пользователей
+user_balance = {}
 
-# Хранилище множителя
-active_games = {}
-
-# Команда старт (начало игры)
+# Старт бота
 @dp.message(CommandStart())
-async def start_game(message: types.Message, state: FSMContext):
-    await state.set_state(GameState.waiting_for_payment)
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="Оплатить", url=FAKE_PAYMENT_LINK)]]
-    )
-    await message.answer("Оплати счет, чтобы начать игру!", reply_markup=kb)
-
-# Подтверждение оплаты (старт игры)
-@dp.message(lambda msg: msg.text.lower() == "я оплатил")
-async def confirm_payment(message: types.Message, state: FSMContext):
+async def start_game(message: types.Message):
     user_id = message.from_user.id
-    if user_id in active_games:
-        await message.answer("Игра уже запущена!")
-        return
-
-    await state.set_state(GameState.playing)
-    active_games[user_id] = {"multiplier": 1.0, "running": True}
+    # Инициализируем баланс, если это первый запуск
+    if user_id not in user_balance:
+        user_balance[user_id] = start_balance
 
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="🛑 Стоп", callback_data="stop_game")]]
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💸 Тратить деньги на игру", callback_data="spend_money")]
+        ]
     )
-    await message.answer("Игра началась! Чем дольше ждешь, тем выше множитель!", reply_markup=kb)
+    await message.answer(f"Привет! У тебя есть {user_balance[user_id]} виртуальных долларов. Готов играть?", reply_markup=kb)
 
-    await run_game(user_id)
+# Кнопка для выбора потратить деньги
+@dp.callback_query(lambda c: c.data == "spend_money")
+async def spend_money(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    kb = InlineKeyboardMarkup(row_width=2)
+    for amount in [10, 50, 100, 200, 500]:  # Добавил 500$ как опцию
+        kb.add(InlineKeyboardButton(text=f"Тратить {amount}$", callback_data=f"spend_{amount}"))
+    await callback_query.message.answer("Выбери, сколько виртуальных долларов ты хочешь потратить на игру:", reply_markup=kb)
 
-# Логика роста множителя
-async def run_game(user_id: int):
-    while user_id in active_games and active_games[user_id]["running"]:
-        await asyncio.sleep(random.uniform(0.5, 1.5))  # Разные интервалы роста
-        if user_id not in active_games:  
-            break
-        active_games[user_id]["multiplier"] += round(random.uniform(0.1, 0.5), 2)
-        await bot.send_message(user_id, f"Текущий множитель: x{active_games[user_id]['multiplier']:.2f}")
+# Обработка выбора суммы для игры
+@dp.callback_query(lambda c: c.data.startswith("spend_"))
+async def play_game(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    amount_spent = int(callback_query.data.split("_")[1])
 
-        if random.random() < 0.05:  # 5% шанс на авто-краш
-            kb = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="🔄 Начать сначала", callback_data="restart_game")]]
-            )
-            await bot.send_message(user_id, "❌ Машинка разбилась! Вы проиграли всю сумму.", reply_markup=kb)
-            active_games.pop(user_id, None)
-            break
-
-# Обработка нажатия кнопки "Стоп"
-@dp.callback_query(lambda c: c.data == "stop_game")
-async def stop_game(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    if user_id not in active_games or not active_games[user_id]["running"]:
-        await callback.answer("Игра уже закончена!", show_alert=True)
+    if user_balance[user_id] < amount_spent:
+        await callback_query.answer(f"У тебя недостаточно денег для игры. У тебя осталось {user_balance[user_id]}$.", show_alert=True)
         return
 
-    multiplier = active_games[user_id]["multiplier"]
-    active_games[user_id]["running"] = False
-    await callback.message.answer(f"Вы остановились вовремя! Ваш выигрыш умножен на x{multiplier:.2f} 🎉")
-    active_games.pop(user_id, None)
+    # Обновляем баланс пользователя
+    user_balance[user_id] -= amount_spent
 
-# Обработка кнопки "Начать сначала"
-@dp.callback_query(lambda c: c.data == "restart_game")
-async def restart_game(callback: types.CallbackQuery, state: FSMContext):
-    await start_game(callback.message, state)
+    # Игровой процесс (случайное проигрывание или выигрыш с множителем)
+    game_result = random.choice(["win", "lose"])
 
-# Запуск бота
-async def main():
-    await dp.start_polling(bot)
+    # Генерируем случайный множитель (от 1 до 11)
+    multiplier = random.randint(1, 11)
 
-if name == "__main__":
-    asyncio.run(main())
+    if game_result == "win":
+        # Выигрыш: ставка умножается на случайный множитель
+        winnings = amount_spent * multiplier
+        user_balance[user_id] += winnings
+        await callback_query.message.answer(f"Поздравляем, ты выиграл! Твой множитель: x{multiplier}. Твой баланс: {user_balance[user_id]}$")
+    else:
+        # Проигрыш
+        await callback_query.message.answer(f"Ты проиграл. Твой баланс: {user_balance[user_id]}$")
+
+if __name__ == "__main__":
+    import asyncio
+    from aiogram import executor
+    logging.basicConfig(level=logging.INFO)
+    asyncio.run(dp.start_polling(bot))
