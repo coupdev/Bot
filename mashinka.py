@@ -15,6 +15,9 @@ start_balance = 500  # 500 виртуальных долларов на стар
 # Словарь для хранения баланса пользователей
 user_balance = {}
 
+# Начальный коэффициент
+multiplier = 0.1  # Начальный коэффициент (x0.1)
+
 # Старт бота
 @dp.message(CommandStart())
 async def start_game(message: types.Message):
@@ -42,6 +45,7 @@ async def spend_money(callback_query: types.CallbackQuery):
 # Обработка выбора суммы для игры
 @dp.callback_query(lambda c: c.data.startswith("spend_"))
 async def play_game(callback_query: types.CallbackQuery):
+    global multiplier  # Используем глобальную переменную multiplier
     user_id = callback_query.from_user.id
     amount_spent = int(callback_query.data.split("_")[1])
 
@@ -52,20 +56,22 @@ async def play_game(callback_query: types.CallbackQuery):
     # Обновляем баланс пользователя
     user_balance[user_id] -= amount_spent
 
-    # Игровой процесс (случайное проигрывание или выигрыш с множителем)
+    # Игровой процесс (случайное проигрывание или выигрыш с коэффициентом)
     game_result = random.choice(["win", "lose"])
 
-    # Генерируем случайный множитель (от 1 до 11)
-    multiplier = random.randint(1, 11)
-
     if game_result == "win":
-        # Выигрыш: ставка умножается на случайный множитель
+        # Выигрыш: ставка умножается на текущий коэффициент
         winnings = amount_spent * multiplier
         user_balance[user_id] += winnings
-        await callback_query.message.answer(f"Поздравляем, ты выиграл! Твой множитель: x{multiplier}. Твой баланс: {user_balance[user_id]}$")
+
+        # Увеличиваем коэффициент случайным образом в диапазоне от 0.1 до 1000.0
+        multiplier = random.uniform(0.1, 1000.0)  # Коэффициент теперь случайное число от 0.1 до 1000.0
+
+        await callback_query.message.answer(f"Поздравляем, ты выиграл! Твой коэффициент: x{multiplier:.2f}. Твой баланс: {user_balance[user_id]}$")
     else:
-        # Проигрыш
-        await callback_query.message.answer(f"Ты проиграл. Твой баланс: {user_balance[user_id]}$")
+        # Проигрыш: вся ставка сгорает, коэффициент сбрасывается на 0.1
+        multiplier = 0.1
+        await callback_query.message.answer(f"Ты проиграл. Вся ставка сгорела. Твой коэффициент сброшен на x{multiplier}. Твой баланс: {user_balance[user_id]}$")
 
 if __name__ == "__main__":
     import asyncio
