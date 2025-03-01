@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Game</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        #game { position: relative; width: 100%; height: 300px; background: #f3f3f3; overflow: hidden; }
+        #car { position: absolute; left: 0; top: 50%; width: 50px; transition: left 0.1s linear; }
+        #multiplier { font-size: 24px; margin-top: 20px; }
+        button { padding: 10px 20px; font-size: 18px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Crash Game</h2>
+    <div id="game">
+        <img id="car" src="car.png" alt="Car">
+    </div>
+    <p id="multiplier">Множитель: x1.00</p>
+    <button id="stop">🛑 Стоп</button>
+    
+    <script>
+        let multiplier = 1.0;
+        let running = true;
+        const car = document.getElementById("car");
+        const multiplierText = document.getElementById("multiplier");
+        const stopButton = document.getElementById("stop");
+
+        function startGame() {
+            let interval = setInterval(() => {
+                if (!running) return clearInterval(interval);
+                
+                multiplier += Math.random() * 0.3;
+                multiplierText.innerText = `Множитель: x${multiplier.toFixed(2)}`;
+
+                let carPos = parseInt(car.style.left || 0);
+                car.style.left = `${carPos + 5}px`;
+
+                if (Math.random() < 0.05) {  // 5% шанс краша
+                    running = false;
+                    alert("Ты проиграл! Машина разбилась 🚗💥");
+                }
+            }, 500);
+        }
+
+        stopButton.onclick = () => {
+            if (running) {
+                running = false;
+                alert(`Ты остановился вовремя! Твой множитель: x${multiplier.toFixed(2)}`);
+            }
+        };
+
+        startGame();
+    </script>
+</body>
+</html>
