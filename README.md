@@ -1,1 +1,1 @@
-# mashinka
+# mashinka-tg mini text game
