@@ -6,9 +6,10 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.client.default import DefaultBotProperties
 
-TOKEN = "YOUR_BOT_TOKEN"
-bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
+TOKEN = "TOKEN"
+bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
 # Хранилище состояния игрока
